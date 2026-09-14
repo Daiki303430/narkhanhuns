@@ -46,10 +46,16 @@ const auth = (event) =>
   (event.headers["x-admin-pin"] || event.headers["X-Admin-Pin"]) === ADMIN_PIN;
 
 async function sendTelegram(text) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error("TELEGRAM CONFIG MISSING", {
+      hasToken: !!TELEGRAM_BOT_TOKEN,
+      hasChatId: !!TELEGRAM_CHAT_ID
+    });
+    return;
+  }
 
   try {
-    await fetch(
+    const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
@@ -58,13 +64,25 @@ async function sendTelegram(text) {
         },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHAT_ID,
-          text,
-          disable_web_page_preview: true
+          text: text
         })
       }
     );
-  } catch (e) {
-    console.error("Telegram error:", e.message);
+
+    const result = await response.json();
+
+    if (!response.ok || result.ok === false) {
+      console.error("TELEGRAM SEND FAILED", {
+        status: response.status,
+        description: result.description
+      });
+    } else {
+      console.log("TELEGRAM SEND SUCCESS", {
+        chatId: TELEGRAM_CHAT_ID
+      });
+    }
+  } catch (error) {
+    console.error("TELEGRAM REQUEST ERROR", error.message);
   }
 }
 
